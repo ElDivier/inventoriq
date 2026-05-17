@@ -39,9 +39,8 @@ COLUMNAS_VENTAS = [
     "total"
 ]
 
-
 # =========================================================
-# ESTILOS VISUALES
+# ESTILO VISUAL EN TEMA BLANCO
 # =========================================================
 
 st.markdown(
@@ -54,17 +53,34 @@ st.markdown(
         color: #111827 !important;
     }
 
-    .main, .block-container {
+    .block-container {
         background-color: #f4f7fb !important;
+        color: #111827 !important;
+        padding-top: 2rem;
+    }
+
+    /* Textos principales */
+    h1, h2, h3, h4, h5, h6, p, span, div, label {
         color: #111827 !important;
     }
 
-    /* Texto general */
-    h1, h2, h3, h4, h5, h6, p, span, div, label {
-        color: #111827;
+    /* Sidebar en blanco */
+    section[data-testid="stSidebar"] {
+        background-color: #ffffff !important;
+        border-right: 1px solid #e5e7eb !important;
     }
 
-    /* Título principal */
+    section[data-testid="stSidebar"] * {
+        color: #111827 !important;
+    }
+
+    section[data-testid="stSidebar"] .stAlert {
+        background-color: #eff6ff !important;
+        color: #1e40af !important;
+        border-radius: 12px !important;
+    }
+
+    /* Títulos */
     .titulo-principal {
         font-size: 42px;
         font-weight: 800;
@@ -78,7 +94,7 @@ st.markdown(
         margin-bottom: 25px;
     }
 
-    /* Tarjetas blancas */
+    /* Tarjetas */
     .card {
         background-color: #ffffff !important;
         color: #111827 !important;
@@ -95,9 +111,8 @@ st.markdown(
         color: #111827 !important;
     }
 
-    /* Tarjetas de métricas */
     .metric-card {
-        background: #ffffff !important;
+        background-color: #ffffff !important;
         padding: 18px;
         border-radius: 16px;
         border: 1px solid #e5e7eb;
@@ -117,7 +132,7 @@ st.markdown(
         font-weight: 800;
     }
 
-    /* Alertas */
+    /* Alertas personalizadas */
     .alerta {
         background-color: #fff7ed !important;
         color: #9a3412 !important;
@@ -170,56 +185,57 @@ st.markdown(
         color: #991b1b !important;
     }
 
-    /* Sidebar */
-    section[data-testid="stSidebar"] {
-        background-color: #1f2937 !important;
-    }
-
-    section[data-testid="stSidebar"] * {
-        color: #ffffff !important;
-    }
-
-    section[data-testid="stSidebar"] .stAlert {
-        background-color: #334155 !important;
-        color: #ffffff !important;
-        border-radius: 12px;
-    }
-
-    /* Dataframes */
-    div[data-testid="stDataFrame"] {
-        background-color: #ffffff !important;
-        color: #111827 !important;
-        border-radius: 12px;
-    }
-
-    /* Inputs */
-    input, textarea, select {
-        color: #111827 !important;
-        background-color: #ffffff !important;
-    }
-
     /* Botones */
     .stButton button {
         background-color: #2563eb !important;
         color: white !important;
-        border-radius: 10px;
-        border: none;
-        font-weight: 600;
+        border-radius: 10px !important;
+        border: none !important;
+        font-weight: 600 !important;
+        padding: 0.5rem 1rem !important;
+    }
+
+    .stButton button:hover {
+        background-color: #1d4ed8 !important;
+        color: white !important;
     }
 
     .stDownloadButton button {
         background-color: #16a34a !important;
         color: white !important;
-        border-radius: 10px;
-        border: none;
-        font-weight: 600;
+        border-radius: 10px !important;
+        border: none !important;
+        font-weight: 600 !important;
+    }
+
+    .stDownloadButton button:hover {
+        background-color: #15803d !important;
+        color: white !important;
+    }
+
+    /* Inputs */
+    input, textarea, select {
+        background-color: #ffffff !important;
+        color: #111827 !important;
+    }
+
+    /* Métricas nativas */
+    div[data-testid="stMetric"] {
+        background-color: #ffffff !important;
+        padding: 16px;
+        border-radius: 14px;
+        border: 1px solid #e5e7eb;
+        box-shadow: 0 3px 10px rgba(0,0,0,0.05);
+    }
+
+    div[data-testid="stMetric"] * {
+        color: #111827 !important;
     }
 
     </style>
     """,
     unsafe_allow_html=True
 )
-
 
 # =========================================================
 # FUNCIONES DE DATOS
@@ -283,23 +299,24 @@ def obtener_resumen_ventas(ventas):
         .agg({"cantidad": "sum", "total": "sum"})
         .sort_values(by="cantidad", ascending=False)
     )
+
     return resumen
 
 
 def generar_recomendacion_compra(row, promedio_ventas):
     stock = row["stock"]
     stock_minimo = row["stock_minimo"]
-    ventas = row.get("cantidad_vendida", 0)
+    ventas_producto = row.get("cantidad_vendida", 0)
 
-    if stock <= stock_minimo and ventas >= promedio_ventas:
+    if stock <= stock_minimo and ventas_producto >= promedio_ventas:
         return "Comprar más urgente: alta demanda y stock bajo"
     elif stock <= stock_minimo:
         return "Reponer inventario: stock crítico"
-    elif ventas >= promedio_ventas and stock > stock_minimo:
+    elif ventas_producto >= promedio_ventas and stock > stock_minimo:
         return "Mantener stock alto: producto con buena rotación"
-    elif ventas == 0:
+    elif ventas_producto == 0:
         return "Comprar menos: no registra ventas"
-    elif ventas < promedio_ventas:
+    elif ventas_producto < promedio_ventas:
         return "Comprar con moderación: baja rotación"
     else:
         return "Mantener compra normal"
@@ -308,11 +325,11 @@ def generar_recomendacion_compra(row, promedio_ventas):
 def generar_sugerencia_ubicacion(row, promedio_ventas):
     producto = str(row["nombre"]).lower()
     categoria = str(row["categoria"]).lower()
-    ventas = row.get("cantidad_vendida", 0)
+    ventas_producto = row.get("cantidad_vendida", 0)
 
-    if ventas == 0:
+    if ventas_producto == 0:
         return "Ubicar en zona visible o aplicar promoción para llamar la atención"
-    elif ventas < promedio_ventas:
+    elif ventas_producto < promedio_ventas:
         return "Mover a estante frontal para mejorar su exposición"
     elif "chocolate" in producto or "caramelo" in producto or "galleta" in producto or "snack" in categoria:
         return "Colocar cerca de caja como producto de impulso"
@@ -320,22 +337,21 @@ def generar_sugerencia_ubicacion(row, promedio_ventas):
         return "Ubicar cerca de snacks para incentivar compra combinada"
     elif "limpieza" in categoria or "detergente" in producto or "cloro" in producto:
         return "Agrupar con productos complementarios de limpieza"
-    elif ventas >= promedio_ventas:
+    elif ventas_producto >= promedio_ventas:
         return "Mantener en zona de fácil acceso por su alta rotación"
     else:
         return "Mantener ubicación actual y revisar semanalmente"
 
 
 # =========================================================
-# CARGA INICIAL
+# CARGA DE DATOS
 # =========================================================
 
 productos = cargar_productos()
 ventas = cargar_ventas()
 
-
 # =========================================================
-# SIDEBAR
+# MENÚ LATERAL
 # =========================================================
 
 st.sidebar.title("📦 InventiQ")
@@ -359,9 +375,8 @@ st.sidebar.info(
     "InventiQ ayuda a controlar productos, analizar ventas y tomar mejores decisiones de compra y ubicación."
 )
 
-
 # =========================================================
-# PÁGINA: INICIO
+# INICIO
 # =========================================================
 
 if menu == "🏠 Inicio":
@@ -430,9 +445,9 @@ if menu == "🏠 Inicio":
     st.markdown(
         """
         <div class="card">
-        <strong>InventiQ</strong> permite registrar productos, controlar existencias, registrar ventas,
-        identificar productos más vendidos, detectar productos con baja rotación y generar
-        recomendaciones para comprar más o menos mercadería. Además, sugiere estrategias
+        <strong>InventiQ</strong> permite registrar productos, controlar existencias,
+        registrar ventas, identificar productos más vendidos, detectar productos con baja rotación
+        y generar recomendaciones para comprar más o menos mercadería. Además, sugiere estrategias
         de ubicación de productos dentro de la tienda para mejorar su venta.
         </div>
         """,
@@ -466,9 +481,8 @@ if menu == "🏠 Inicio":
                     unsafe_allow_html=True
                 )
 
-
 # =========================================================
-# PÁGINA: REGISTRAR PRODUCTO
+# REGISTRAR PRODUCTO
 # =========================================================
 
 elif menu == "➕ Registrar producto":
@@ -535,9 +549,8 @@ elif menu == "➕ Registrar producto":
     st.markdown("### 📋 Productos registrados")
     st.dataframe(productos, width="stretch")
 
-
 # =========================================================
-# PÁGINA: REGISTRAR VENTA
+# REGISTRAR VENTA
 # =========================================================
 
 elif menu == "🛒 Registrar venta":
@@ -582,7 +595,6 @@ elif menu == "🛒 Registrar venta":
 
             if vender:
                 indice_producto = productos[productos["codigo"] == codigo_producto].index[0]
-
                 productos.loc[indice_producto, "stock"] = int(productos.loc[indice_producto, "stock"]) - int(cantidad)
 
                 nueva_venta = pd.DataFrame(
@@ -614,11 +626,11 @@ elif menu == "🛒 Registrar venta":
                     )
 
     st.markdown("### 🧾 Historial de ventas")
-    st.dataframe(ventas.sort_values(by="fecha", ascending=False) if not ventas.empty else ventas, width="stretch")
-
+    historial = ventas.sort_values(by="fecha", ascending=False) if not ventas.empty else ventas
+    st.dataframe(historial, width="stretch")
 
 # =========================================================
-# PÁGINA: INVENTARIO
+# INVENTARIO
 # =========================================================
 
 elif menu == "📋 Inventario":
@@ -664,9 +676,8 @@ elif menu == "📋 Inventario":
             guardar_productos(productos)
             st.success("Stock actualizado correctamente.")
 
-
 # =========================================================
-# PÁGINA: ANÁLISIS DE VENTAS
+# ANÁLISIS DE VENTAS
 # =========================================================
 
 elif menu == "📊 Análisis de ventas":
@@ -684,30 +695,20 @@ elif menu == "📊 Análisis de ventas":
         st.markdown("### 🏆 Productos más vendidos")
         mas_vendidos = resumen.sort_values(by="cantidad", ascending=False).head(5)
         st.dataframe(mas_vendidos, width="stretch")
-
-        st.bar_chart(
-            mas_vendidos.set_index("producto")["cantidad"]
-        )
+        st.bar_chart(mas_vendidos.set_index("producto")["cantidad"])
 
         st.markdown("### 📉 Productos menos vendidos")
         menos_vendidos = resumen.sort_values(by="cantidad", ascending=True).head(5)
         st.dataframe(menos_vendidos, width="stretch")
-
-        st.bar_chart(
-            menos_vendidos.set_index("producto")["cantidad"]
-        )
+        st.bar_chart(menos_vendidos.set_index("producto")["cantidad"])
 
         st.markdown("### 💰 Ingresos por producto")
         ingresos = resumen.sort_values(by="total", ascending=False)
         st.dataframe(ingresos, width="stretch")
-
-        st.bar_chart(
-            ingresos.set_index("producto")["total"]
-        )
-
+        st.bar_chart(ingresos.set_index("producto")["total"])
 
 # =========================================================
-# PÁGINA: RECOMENDACIONES
+# RECOMENDACIONES
 # =========================================================
 
 elif menu == "💡 Recomendaciones":
@@ -721,7 +722,6 @@ elif menu == "💡 Recomendaciones":
         st.warning("Primero debes registrar productos.")
     else:
         resumen = obtener_resumen_ventas(ventas)
-
         productos_analisis = productos.copy()
 
         if resumen.empty:
@@ -803,17 +803,16 @@ elif menu == "💡 Recomendaciones":
             """
             <div class="card">
             La aplicación analiza el comportamiento de cada producto según su stock actual,
-            stock mínimo y cantidad vendida. Con esta información, <strong>InventiQ</strong> recomienda
-            qué productos comprar más, cuáles comprar menos y qué artículos deben ser
+            stock mínimo y cantidad vendida. Con esta información, <strong>InventiQ</strong>
+            recomienda qué productos comprar más, cuáles comprar menos y qué artículos deben ser
             reubicados dentro de la tienda para mejorar su visibilidad y aumentar sus ventas.
             </div>
             """,
             unsafe_allow_html=True
         )
 
-
 # =========================================================
-# PÁGINA: REPORTES
+# REPORTES
 # =========================================================
 
 elif menu == "🧾 Reportes":
