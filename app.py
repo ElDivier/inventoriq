@@ -47,34 +47,57 @@ COLUMNAS_VENTAS = [
 st.markdown(
     """
     <style>
-    .main {
-        background-color: #f7f9fc;
+
+    /* Fondo general */
+    .stApp {
+        background-color: #f4f7fb !important;
+        color: #111827 !important;
     }
 
+    .main, .block-container {
+        background-color: #f4f7fb !important;
+        color: #111827 !important;
+    }
+
+    /* Texto general */
+    h1, h2, h3, h4, h5, h6, p, span, div, label {
+        color: #111827;
+    }
+
+    /* Título principal */
     .titulo-principal {
         font-size: 42px;
         font-weight: 800;
-        color: #1f2937;
+        color: #111827 !important;
         margin-bottom: 0px;
     }
 
     .subtitulo {
         font-size: 18px;
-        color: #6b7280;
+        color: #374151 !important;
         margin-bottom: 25px;
     }
 
+    /* Tarjetas blancas */
     .card {
-        background-color: white;
+        background-color: #ffffff !important;
+        color: #111827 !important;
         padding: 22px;
         border-radius: 18px;
         box-shadow: 0 4px 14px rgba(0,0,0,0.08);
         border: 1px solid #e5e7eb;
         margin-bottom: 18px;
+        font-size: 16px;
+        line-height: 1.6;
     }
 
+    .card * {
+        color: #111827 !important;
+    }
+
+    /* Tarjetas de métricas */
     .metric-card {
-        background: linear-gradient(135deg, #ffffff, #f3f4f6);
+        background: #ffffff !important;
         padding: 18px;
         border-radius: 16px;
         border: 1px solid #e5e7eb;
@@ -84,51 +107,114 @@ st.markdown(
 
     .metric-title {
         font-size: 14px;
-        color: #6b7280;
+        color: #4b5563 !important;
         font-weight: 600;
     }
 
     .metric-value {
         font-size: 28px;
-        color: #111827;
+        color: #111827 !important;
         font-weight: 800;
     }
 
+    /* Alertas */
     .alerta {
-        background-color: #fff7ed;
-        color: #9a3412;
+        background-color: #fff7ed !important;
+        color: #9a3412 !important;
         border-left: 6px solid #f97316;
         padding: 14px;
         border-radius: 10px;
         margin-bottom: 10px;
     }
 
+    .alerta * {
+        color: #9a3412 !important;
+    }
+
     .exito {
-        background-color: #ecfdf5;
-        color: #065f46;
+        background-color: #ecfdf5 !important;
+        color: #065f46 !important;
         border-left: 6px solid #10b981;
         padding: 14px;
         border-radius: 10px;
         margin-bottom: 10px;
     }
 
+    .exito * {
+        color: #065f46 !important;
+    }
+
     .info-box {
-        background-color: #eff6ff;
-        color: #1e40af;
+        background-color: #eff6ff !important;
+        color: #1e40af !important;
         border-left: 6px solid #3b82f6;
         padding: 14px;
         border-radius: 10px;
         margin-bottom: 10px;
     }
 
+    .info-box * {
+        color: #1e40af !important;
+    }
+
     .danger-box {
-        background-color: #fef2f2;
-        color: #991b1b;
+        background-color: #fef2f2 !important;
+        color: #991b1b !important;
         border-left: 6px solid #ef4444;
         padding: 14px;
         border-radius: 10px;
         margin-bottom: 10px;
     }
+
+    .danger-box * {
+        color: #991b1b !important;
+    }
+
+    /* Sidebar */
+    section[data-testid="stSidebar"] {
+        background-color: #1f2937 !important;
+    }
+
+    section[data-testid="stSidebar"] * {
+        color: #ffffff !important;
+    }
+
+    section[data-testid="stSidebar"] .stAlert {
+        background-color: #334155 !important;
+        color: #ffffff !important;
+        border-radius: 12px;
+    }
+
+    /* Dataframes */
+    div[data-testid="stDataFrame"] {
+        background-color: #ffffff !important;
+        color: #111827 !important;
+        border-radius: 12px;
+    }
+
+    /* Inputs */
+    input, textarea, select {
+        color: #111827 !important;
+        background-color: #ffffff !important;
+    }
+
+    /* Botones */
+    .stButton button {
+        background-color: #2563eb !important;
+        color: white !important;
+        border-radius: 10px;
+        border: none;
+        font-weight: 600;
+    }
+
+    .stDownloadButton button {
+        background-color: #16a34a !important;
+        color: white !important;
+        border-radius: 10px;
+        border: none;
+        font-weight: 600;
+    }
+
     </style>
     """,
     unsafe_allow_html=True
@@ -287,7 +373,6 @@ if menu == "🏠 Inicio":
 
     total_productos = len(productos)
     stock_total = int(productos["stock"].sum()) if not productos.empty else 0
-    valor_inventario = float((productos["precio_compra"] * productos["stock"]).sum()) if not productos.empty else 0
     ventas_totales = float(ventas["total"].sum()) if not ventas.empty else 0
 
     productos_stock_bajo = 0
@@ -345,7 +430,7 @@ if menu == "🏠 Inicio":
     st.markdown(
         """
         <div class="card">
-        InventiQ permite registrar productos, controlar existencias, registrar ventas,
+        <strong>InventiQ</strong> permite registrar productos, controlar existencias, registrar ventas,
         identificar productos más vendidos, detectar productos con baja rotación y generar
         recomendaciones para comprar más o menos mercadería. Además, sugiere estrategias
         de ubicación de productos dentro de la tienda para mejorar su venta.
@@ -448,7 +533,7 @@ elif menu == "➕ Registrar producto":
             st.success("Producto registrado correctamente.")
 
     st.markdown("### 📋 Productos registrados")
-    st.dataframe(productos)
+    st.dataframe(productos, width="stretch")
 
 
 # =========================================================
@@ -529,7 +614,7 @@ elif menu == "🛒 Registrar venta":
                     )
 
     st.markdown("### 🧾 Historial de ventas")
-    st.dataframe(ventas.sort_values(by="fecha", ascending=False) if not ventas.empty else ventas)
+    st.dataframe(ventas.sort_values(by="fecha", ascending=False) if not ventas.empty else ventas, width="stretch")
 
 
 # =========================================================
@@ -561,7 +646,7 @@ elif menu == "📋 Inventario":
             axis=1
         )
 
-        st.dataframe(df_filtrado)
+        st.dataframe(df_filtrado, width="stretch")
 
         st.markdown("### 🔄 Actualizar stock")
 
@@ -598,7 +683,7 @@ elif menu == "📊 Análisis de ventas":
 
         st.markdown("### 🏆 Productos más vendidos")
         mas_vendidos = resumen.sort_values(by="cantidad", ascending=False).head(5)
-        st.dataframe(mas_vendidos)
+        st.dataframe(mas_vendidos, width="stretch")
 
         st.bar_chart(
             mas_vendidos.set_index("producto")["cantidad"]
@@ -606,7 +691,7 @@ elif menu == "📊 Análisis de ventas":
 
         st.markdown("### 📉 Productos menos vendidos")
         menos_vendidos = resumen.sort_values(by="cantidad", ascending=True).head(5)
-        st.dataframe(menos_vendidos)
+        st.dataframe(menos_vendidos, width="stretch")
 
         st.bar_chart(
             menos_vendidos.set_index("producto")["cantidad"]
@@ -614,7 +699,7 @@ elif menu == "📊 Análisis de ventas":
 
         st.markdown("### 💰 Ingresos por producto")
         ingresos = resumen.sort_values(by="total", ascending=False)
-        st.dataframe(ingresos)
+        st.dataframe(ingresos, width="stretch")
 
         st.bar_chart(
             ingresos.set_index("producto")["total"]
@@ -684,7 +769,7 @@ elif menu == "💡 Recomendaciones":
         ]
 
         st.markdown("### 🛒 Recomendaciones de compra")
-        st.dataframe(productos_analisis[columnas_mostrar])
+        st.dataframe(productos_analisis[columnas_mostrar], width="stretch")
 
         st.markdown("### 🚨 Productos que requieren atención")
 
@@ -718,7 +803,7 @@ elif menu == "💡 Recomendaciones":
             """
             <div class="card">
             La aplicación analiza el comportamiento de cada producto según su stock actual,
-            stock mínimo y cantidad vendida. Con esta información, InventiQ recomienda
+            stock mínimo y cantidad vendida. Con esta información, <strong>InventiQ</strong> recomienda
             qué productos comprar más, cuáles comprar menos y qué artículos deben ser
             reubicados dentro de la tienda para mejorar su visibilidad y aumentar sus ventas.
             </div>
@@ -743,6 +828,7 @@ elif menu == "🧾 Reportes":
     else:
         total_inventario = float((productos["precio_compra"] * productos["stock"]).sum())
         ganancia_estimada = float(((productos["precio_venta"] - productos["precio_compra"]) * productos["stock"]).sum())
+        ventas_acumuladas = float(ventas["total"].sum()) if not ventas.empty else 0
 
         col1, col2, col3 = st.columns(3)
 
@@ -753,13 +839,13 @@ elif menu == "🧾 Reportes":
             st.metric("Ganancia potencial", formato_dinero(ganancia_estimada))
 
         with col3:
-            st.metric("Ventas acumuladas", formato_dinero(float(ventas["total"].sum()) if not ventas.empty else 0))
+            st.metric("Ventas acumuladas", formato_dinero(ventas_acumuladas))
 
         st.markdown("### 📦 Stock por categoría")
 
         stock_categoria = productos.groupby("categoria", as_index=False)["stock"].sum()
 
-        st.dataframe(stock_categoria)
+        st.dataframe(stock_categoria, width="stretch")
         st.bar_chart(stock_categoria.set_index("categoria")["stock"])
 
         st.markdown("### 🧾 Exportar información")
