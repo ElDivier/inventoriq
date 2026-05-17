@@ -2,6 +2,7 @@ import streamlit as st
 import pandas as pd
 from pathlib import Path
 from datetime import datetime
+import hashlib
 
 # =========================================================
 # CONFIGURACIÓN GENERAL
@@ -13,10 +14,20 @@ st.set_page_config(
     layout="wide"
 )
 
+USUARIOS_FILE = Path("usuarios_inventiq.csv")
 PRODUCTOS_FILE = Path("productos_inventiq.csv")
 VENTAS_FILE = Path("ventas_inventiq.csv")
 
+COLUMNAS_USUARIOS = [
+    "usuario",
+    "password_hash",
+    "tienda",
+    "encargado",
+    "fecha_registro"
+]
+
 COLUMNAS_PRODUCTOS = [
+    "tienda",
     "codigo",
     "nombre",
     "categoria",
@@ -30,6 +41,7 @@ COLUMNAS_PRODUCTOS = [
 ]
 
 COLUMNAS_VENTAS = [
+    "tienda",
     "fecha",
     "codigo",
     "producto",
@@ -40,14 +52,13 @@ COLUMNAS_VENTAS = [
 ]
 
 # =========================================================
-# ESTILO VISUAL EN TEMA BLANCO
+# ESTILO VISUAL TEMA BLANCO
 # =========================================================
 
 st.markdown(
     """
     <style>
 
-    /* Fondo general */
     .stApp {
         background-color: #f4f7fb !important;
         color: #111827 !important;
@@ -59,12 +70,10 @@ st.markdown(
         padding-top: 2rem;
     }
 
-    /* Textos principales */
     h1, h2, h3, h4, h5, h6, p, span, div, label {
         color: #111827 !important;
     }
 
-    /* Sidebar en blanco */
     section[data-testid="stSidebar"] {
         background-color: #ffffff !important;
         border-right: 1px solid #e5e7eb !important;
@@ -74,13 +83,6 @@ st.markdown(
         color: #111827 !important;
     }
 
-    section[data-testid="stSidebar"] .stAlert {
-        background-color: #eff6ff !important;
-        color: #1e40af !important;
-        border-radius: 12px !important;
-    }
-
-    /* Títulos */
     .titulo-principal {
         font-size: 42px;
         font-weight: 800;
@@ -94,7 +96,6 @@ st.markdown(
         margin-bottom: 25px;
     }
 
-    /* Tarjetas */
     .card {
         background-color: #ffffff !important;
         color: #111827 !important;
@@ -132,7 +133,6 @@ st.markdown(
         font-weight: 800;
     }
 
-    /* Alertas personalizadas */
     .alerta {
         background-color: #fff7ed !important;
         color: #9a3412 !important;
@@ -185,7 +185,6 @@ st.markdown(
         color: #991b1b !important;
     }
 
-    /* Botones */
     .stButton button {
         background-color: #2563eb !important;
         color: white !important;
@@ -208,18 +207,11 @@ st.markdown(
         font-weight: 600 !important;
     }
 
-    .stDownloadButton button:hover {
-        background-color: #15803d !important;
-        color: white !important;
-    }
-
-    /* Inputs */
     input, textarea, select {
         background-color: #ffffff !important;
         color: #111827 !important;
     }
 
-    /* Métricas nativas */
     div[data-testid="stMetric"] {
         background-color: #ffffff !important;
         padding: 16px;
@@ -238,18 +230,44 @@ st.markdown(
 )
 
 # =========================================================
-# FUNCIONES DE DATOS
+# FUNCIONES GENERALES
 # =========================================================
 
-def cargar_productos():
-    if PRODUCTOS_FILE.exists():
-        df = pd.read_csv(PRODUCTOS_FILE)
-    else:
-        df = pd.DataFrame(columns=COLUMNAS_PRODUCTOS)
+def hash_password(password):
+    return hashlib.sha256(password.encode()).hexdigest()
 
-    for col in COLUMNAS_PRODUCTOS:
+
+def formato_dinero(valor):
+    return f"${valor:,.2f}"
+
+
+def cargar_csv(ruta, columnas):
+    if ruta.exists():
+        df = pd.read_csv(ruta)
+    else:
+        df = pd.DataFrame(columns=columnas)
+
+    for col in columnas:
         if col not in df.columns:
             df[col] = ""
+
+    return df[columnas]
+
+
+def guardar_csv(df, ruta):
+    df.to_csv(ruta, index=False)
+
+
+def cargar_usuarios():
+    return cargar_csv(USUARIOS_FILE, COLUMNAS_USUARIOS)
+
+
+def guardar_usuarios(df):
+    guardar_csv(df, USUARIOS_FILE)
+
+
+def cargar_productos():
+    df = cargar_csv(PRODUCTOS_FILE, COLUMNAS_PRODUCTOS)
 
     if not df.empty:
         df["precio_compra"] = pd.to_numeric(df["precio_compra"], errors="coerce").fillna(0)
@@ -257,45 +275,34 @@ def cargar_productos():
         df["stock"] = pd.to_numeric(df["stock"], errors="coerce").fillna(0).astype(int)
         df["stock_minimo"] = pd.to_numeric(df["stock_minimo"], errors="coerce").fillna(0).astype(int)
 
-    return df[COLUMNAS_PRODUCTOS]
+    return df
 
 
 def guardar_productos(df):
-    df.to_csv(PRODUCTOS_FILE, index=False)
+    guardar_csv(df, PRODUCTOS_FILE)
 
 
 def cargar_ventas():
-    if VENTAS_FILE.exists():
-        df = pd.read_csv(VENTAS_FILE)
-    else:
-        df = pd.DataFrame(columns=COLUMNAS_VENTAS)
-
-    for col in COLUMNAS_VENTAS:
-        if col not in df.columns:
-            df[col] = ""
+    df = cargar_csv(VENTAS_FILE, COLUMNAS_VENTAS)
 
     if not df.empty:
         df["cantidad"] = pd.to_numeric(df["cantidad"], errors="coerce").fillna(0).astype(int)
         df["precio_unitario"] = pd.to_numeric(df["precio_unitario"], errors="coerce").fillna(0)
         df["total"] = pd.to_numeric(df["total"], errors="coerce").fillna(0)
 
-    return df[COLUMNAS_VENTAS]
+    return df
 
 
 def guardar_ventas(df):
-    df.to_csv(VENTAS_FILE, index=False)
+    guardar_csv(df, VENTAS_FILE)
 
 
-def formato_dinero(valor):
-    return f"${valor:,.2f}"
-
-
-def obtener_resumen_ventas(ventas):
-    if ventas.empty:
+def obtener_resumen_ventas(ventas_tienda):
+    if ventas_tienda.empty:
         return pd.DataFrame(columns=["producto", "categoria", "cantidad", "total"])
 
     resumen = (
-        ventas.groupby(["producto", "categoria"], as_index=False)
+        ventas_tienda.groupby(["producto", "categoria"], as_index=False)
         .agg({"cantidad": "sum", "total": "sum"})
         .sort_values(by="cantidad", ascending=False)
     )
@@ -344,18 +351,152 @@ def generar_sugerencia_ubicacion(row, promedio_ventas):
 
 
 # =========================================================
+# ESTADO DE SESIÓN
+# =========================================================
+
+if "logueado" not in st.session_state:
+    st.session_state.logueado = False
+
+if "usuario" not in st.session_state:
+    st.session_state.usuario = ""
+
+if "tienda" not in st.session_state:
+    st.session_state.tienda = ""
+
+if "encargado" not in st.session_state:
+    st.session_state.encargado = ""
+
+
+# =========================================================
+# LOGIN Y REGISTRO
+# =========================================================
+
+def pantalla_login_registro():
+    st.markdown('<p class="titulo-principal">InventiQ</p>', unsafe_allow_html=True)
+    st.markdown(
+        '<p class="subtitulo">Sistema inteligente de inventarios para pequeñas tiendas</p>',
+        unsafe_allow_html=True
+    )
+
+    st.markdown(
+        """
+        <div class="card">
+        Bienvenido a <strong>InventiQ</strong>. Registra tu tienda o inicia sesión para acceder
+        a tu propio panel de inventario, ventas, análisis y recomendaciones.
+        </div>
+        """,
+        unsafe_allow_html=True
+    )
+
+    tab_login, tab_registro = st.tabs(["🔐 Iniciar sesión", "📝 Registrarse"])
+
+    usuarios = cargar_usuarios()
+
+    with tab_login:
+        st.markdown("### 🔐 Iniciar sesión")
+
+        with st.form("form_login"):
+            usuario_login = st.text_input("Usuario")
+            password_login = st.text_input("Contraseña", type="password")
+            ingresar = st.form_submit_button("Ingresar")
+
+        if ingresar:
+            if usuario_login.strip() == "" or password_login.strip() == "":
+                st.warning("Ingresa usuario y contraseña.")
+            else:
+                password_hash = hash_password(password_login)
+
+                usuario_encontrado = usuarios[
+                    (usuarios["usuario"] == usuario_login) &
+                    (usuarios["password_hash"] == password_hash)
+                ]
+
+                if usuario_encontrado.empty:
+                    st.error("Usuario o contraseña incorrectos.")
+                else:
+                    datos = usuario_encontrado.iloc[0]
+
+                    st.session_state.logueado = True
+                    st.session_state.usuario = datos["usuario"]
+                    st.session_state.tienda = datos["tienda"]
+                    st.session_state.encargado = datos["encargado"]
+
+                    st.success("Inicio de sesión correcto.")
+                    st.rerun()
+
+    with tab_registro:
+        st.markdown("### 📝 Registrar nueva tienda")
+
+        with st.form("form_registro"):
+            tienda = st.text_input("Nombre de la tienda", placeholder="Ejemplo: Minimarket La Esquina")
+            encargado = st.text_input("Nombre del encargado", placeholder="Ejemplo: Juan Pérez")
+            nuevo_usuario = st.text_input("Crear usuario", placeholder="Ejemplo: tienda1")
+            nueva_password = st.text_input("Crear contraseña", type="password")
+            confirmar_password = st.text_input("Confirmar contraseña", type="password")
+
+            registrar = st.form_submit_button("Crear cuenta")
+
+        if registrar:
+            if tienda.strip() == "" or encargado.strip() == "" or nuevo_usuario.strip() == "" or nueva_password.strip() == "":
+                st.warning("Completa todos los campos.")
+            elif nueva_password != confirmar_password:
+                st.error("Las contraseñas no coinciden.")
+            elif nuevo_usuario in usuarios["usuario"].astype(str).values:
+                st.error("Ese usuario ya existe. Elige otro.")
+            else:
+                nuevo_registro = pd.DataFrame(
+                    [{
+                        "usuario": nuevo_usuario,
+                        "password_hash": hash_password(nueva_password),
+                        "tienda": tienda,
+                        "encargado": encargado,
+                        "fecha_registro": datetime.now().strftime("%Y-%m-%d %H:%M:%S")
+                    }]
+                )
+
+                usuarios = pd.concat([usuarios, nuevo_registro], ignore_index=True)
+                guardar_usuarios(usuarios)
+
+                st.success("Cuenta creada correctamente. Ahora puedes iniciar sesión.")
+
+
+if not st.session_state.logueado:
+    pantalla_login_registro()
+    st.stop()
+
+
+# =========================================================
 # CARGA DE DATOS
 # =========================================================
 
+usuarios = cargar_usuarios()
 productos = cargar_productos()
 ventas = cargar_ventas()
+
+tienda_actual = st.session_state.tienda
+usuario_actual = st.session_state.usuario
+encargado_actual = st.session_state.encargado
+
+productos_tienda = productos[productos["tienda"] == tienda_actual].copy()
+ventas_tienda = ventas[ventas["tienda"] == tienda_actual].copy()
+
 
 # =========================================================
 # MENÚ LATERAL
 # =========================================================
 
 st.sidebar.title("📦 InventiQ")
-st.sidebar.caption("Sistema inteligente de inventarios")
+st.sidebar.caption("Panel de tienda")
+
+st.sidebar.markdown(
+    f"""
+    <div class="card">
+    <strong>Tienda:</strong><br>{tienda_actual}<br><br>
+    <strong>Encargado:</strong><br>{encargado_actual}
+    </div>
+    """,
+    unsafe_allow_html=True
+)
 
 menu = st.sidebar.radio(
     "Menú principal",
@@ -371,9 +512,14 @@ menu = st.sidebar.radio(
 )
 
 st.sidebar.markdown("---")
-st.sidebar.info(
-    "InventiQ ayuda a controlar productos, analizar ventas y tomar mejores decisiones de compra y ubicación."
-)
+
+if st.sidebar.button("Cerrar sesión"):
+    st.session_state.logueado = False
+    st.session_state.usuario = ""
+    st.session_state.tienda = ""
+    st.session_state.encargado = ""
+    st.rerun()
+
 
 # =========================================================
 # INICIO
@@ -382,17 +528,17 @@ st.sidebar.info(
 if menu == "🏠 Inicio":
     st.markdown('<p class="titulo-principal">InventiQ</p>', unsafe_allow_html=True)
     st.markdown(
-        '<p class="subtitulo">Aplicación inteligente de gestión de inventarios para pequeñas tiendas</p>',
+        f'<p class="subtitulo">Panel de gestión de inventarios - {tienda_actual}</p>',
         unsafe_allow_html=True
     )
 
-    total_productos = len(productos)
-    stock_total = int(productos["stock"].sum()) if not productos.empty else 0
-    ventas_totales = float(ventas["total"].sum()) if not ventas.empty else 0
+    total_productos = len(productos_tienda)
+    stock_total = int(productos_tienda["stock"].sum()) if not productos_tienda.empty else 0
+    ventas_totales = float(ventas_tienda["total"].sum()) if not ventas_tienda.empty else 0
 
     productos_stock_bajo = 0
-    if not productos.empty:
-        productos_stock_bajo = len(productos[productos["stock"] <= productos["stock_minimo"]])
+    if not productos_tienda.empty:
+        productos_stock_bajo = len(productos_tienda[productos_tienda["stock"] <= productos_tienda["stock_minimo"]])
 
     col1, col2, col3, col4 = st.columns(4)
 
@@ -445,10 +591,10 @@ if menu == "🏠 Inicio":
     st.markdown(
         """
         <div class="card">
-        <strong>InventiQ</strong> permite registrar productos, controlar existencias,
-        registrar ventas, identificar productos más vendidos, detectar productos con baja rotación
-        y generar recomendaciones para comprar más o menos mercadería. Además, sugiere estrategias
-        de ubicación de productos dentro de la tienda para mejorar su venta.
+        <strong>InventiQ</strong> permite que cada tienda tenga su propio panel de inventario.
+        Desde aquí puedes registrar productos, registrar ventas, controlar stock, revisar productos
+        más vendidos, identificar productos con baja rotación y recibir recomendaciones de compra
+        y ubicación estratégica dentro del local.
         </div>
         """,
         unsafe_allow_html=True
@@ -456,13 +602,13 @@ if menu == "🏠 Inicio":
 
     st.markdown("### 🚨 Alertas rápidas")
 
-    if productos.empty:
+    if productos_tienda.empty:
         st.markdown(
-            '<div class="info-box">Todavía no hay productos registrados. Ingresa al módulo “Registrar producto”.</div>',
+            '<div class="info-box">Todavía no hay productos registrados para esta tienda.</div>',
             unsafe_allow_html=True
         )
     else:
-        stock_bajo_df = productos[productos["stock"] <= productos["stock_minimo"]]
+        stock_bajo_df = productos_tienda[productos_tienda["stock"] <= productos_tienda["stock_minimo"]]
 
         if stock_bajo_df.empty:
             st.markdown(
@@ -481,6 +627,7 @@ if menu == "🏠 Inicio":
                     unsafe_allow_html=True
                 )
 
+
 # =========================================================
 # REGISTRAR PRODUCTO
 # =========================================================
@@ -488,7 +635,7 @@ if menu == "🏠 Inicio":
 elif menu == "➕ Registrar producto":
     st.markdown('<p class="titulo-principal">Registrar producto</p>', unsafe_allow_html=True)
     st.markdown(
-        '<p class="subtitulo">Agrega productos al inventario de la tienda</p>',
+        f'<p class="subtitulo">Agrega productos al inventario de {tienda_actual}</p>',
         unsafe_allow_html=True
     )
 
@@ -507,6 +654,8 @@ elif menu == "➕ Registrar producto":
                     "Limpieza",
                     "Aseo personal",
                     "Alimentos",
+                    "Papelería",
+                    "Tecnología",
                     "Otros"
                 ]
             )
@@ -524,30 +673,40 @@ elif menu == "➕ Registrar producto":
     if guardar:
         if codigo.strip() == "" or nombre.strip() == "":
             st.error("Debes ingresar al menos el código y el nombre del producto.")
-        elif codigo in productos["codigo"].astype(str).values:
-            st.error("Ya existe un producto con ese código.")
         else:
-            nuevo_producto = pd.DataFrame(
-                [{
-                    "codigo": codigo,
-                    "nombre": nombre,
-                    "categoria": categoria,
-                    "proveedor": proveedor,
-                    "precio_compra": precio_compra,
-                    "precio_venta": precio_venta,
-                    "stock": int(stock),
-                    "stock_minimo": int(stock_minimo),
-                    "ubicacion": ubicacion,
-                    "fecha_ingreso": datetime.now().strftime("%Y-%m-%d")
-                }]
-            )
+            producto_existente = productos[
+                (productos["tienda"] == tienda_actual) &
+                (productos["codigo"] == codigo)
+            ]
 
-            productos = pd.concat([productos, nuevo_producto], ignore_index=True)
-            guardar_productos(productos)
-            st.success("Producto registrado correctamente.")
+            if not producto_existente.empty:
+                st.error("Ya existe un producto con ese código en esta tienda.")
+            else:
+                nuevo_producto = pd.DataFrame(
+                    [{
+                        "tienda": tienda_actual,
+                        "codigo": codigo,
+                        "nombre": nombre,
+                        "categoria": categoria,
+                        "proveedor": proveedor,
+                        "precio_compra": precio_compra,
+                        "precio_venta": precio_venta,
+                        "stock": int(stock),
+                        "stock_minimo": int(stock_minimo),
+                        "ubicacion": ubicacion,
+                        "fecha_ingreso": datetime.now().strftime("%Y-%m-%d")
+                    }]
+                )
+
+                productos = pd.concat([productos, nuevo_producto], ignore_index=True)
+                guardar_productos(productos)
+
+                st.success("Producto registrado correctamente.")
+                st.rerun()
 
     st.markdown("### 📋 Productos registrados")
-    st.dataframe(productos, width="stretch")
+    st.dataframe(productos_tienda, width="stretch")
+
 
 # =========================================================
 # REGISTRAR VENTA
@@ -556,14 +715,14 @@ elif menu == "➕ Registrar producto":
 elif menu == "🛒 Registrar venta":
     st.markdown('<p class="titulo-principal">Registrar venta</p>', unsafe_allow_html=True)
     st.markdown(
-        '<p class="subtitulo">Registra la venta de productos y actualiza automáticamente el stock</p>',
+        f'<p class="subtitulo">Registra ventas de productos de {tienda_actual}</p>',
         unsafe_allow_html=True
     )
 
-    if productos.empty:
+    if productos_tienda.empty:
         st.warning("Primero debes registrar productos en el inventario.")
     else:
-        productos_disponibles = productos[productos["stock"] > 0]
+        productos_disponibles = productos_tienda[productos_tienda["stock"] > 0]
 
         if productos_disponibles.empty:
             st.error("No existen productos con stock disponible para vender.")
@@ -574,7 +733,7 @@ elif menu == "🛒 Registrar venta":
                 producto_seleccionado = st.selectbox("Producto vendido", lista_productos)
                 codigo_producto = producto_seleccionado.split(" - ")[0]
 
-                producto_info = productos[productos["codigo"] == codigo_producto].iloc[0]
+                producto_info = productos_tienda[productos_tienda["codigo"] == codigo_producto].iloc[0]
 
                 st.info(
                     f"Producto: {producto_info['nombre']} | Stock disponible: {producto_info['stock']} | "
@@ -594,11 +753,17 @@ elif menu == "🛒 Registrar venta":
                 vender = st.form_submit_button("Registrar venta")
 
             if vender:
-                indice_producto = productos[productos["codigo"] == codigo_producto].index[0]
+                condicion_producto = (
+                    (productos["tienda"] == tienda_actual) &
+                    (productos["codigo"] == codigo_producto)
+                )
+
+                indice_producto = productos[condicion_producto].index[0]
                 productos.loc[indice_producto, "stock"] = int(productos.loc[indice_producto, "stock"]) - int(cantidad)
 
                 nueva_venta = pd.DataFrame(
                     [{
+                        "tienda": tienda_actual,
                         "fecha": datetime.now().strftime("%Y-%m-%d %H:%M:%S"),
                         "codigo": codigo_producto,
                         "producto": producto_info["nombre"],
@@ -615,19 +780,12 @@ elif menu == "🛒 Registrar venta":
                 guardar_ventas(ventas)
 
                 st.success("Venta registrada correctamente. El stock fue actualizado.")
-
-                nuevo_stock = int(productos.loc[indice_producto, "stock"])
-                stock_minimo = int(productos.loc[indice_producto, "stock_minimo"])
-
-                if nuevo_stock <= stock_minimo:
-                    st.warning(
-                        f"Atención: el producto {producto_info['nombre']} quedó con stock bajo. "
-                        f"Stock actual: {nuevo_stock}."
-                    )
+                st.rerun()
 
     st.markdown("### 🧾 Historial de ventas")
-    historial = ventas.sort_values(by="fecha", ascending=False) if not ventas.empty else ventas
+    historial = ventas_tienda.sort_values(by="fecha", ascending=False) if not ventas_tienda.empty else ventas_tienda
     st.dataframe(historial, width="stretch")
+
 
 # =========================================================
 # INVENTARIO
@@ -636,19 +794,19 @@ elif menu == "🛒 Registrar venta":
 elif menu == "📋 Inventario":
     st.markdown('<p class="titulo-principal">Inventario</p>', unsafe_allow_html=True)
     st.markdown(
-        '<p class="subtitulo">Consulta el estado actual de los productos registrados</p>',
+        f'<p class="subtitulo">Consulta, actualiza o elimina productos de {tienda_actual}</p>',
         unsafe_allow_html=True
     )
 
-    if productos.empty:
-        st.warning("No existen productos registrados.")
+    if productos_tienda.empty:
+        st.warning("No existen productos registrados para esta tienda.")
     else:
         filtro_categoria = st.selectbox(
             "Filtrar por categoría",
-            ["Todas"] + sorted(productos["categoria"].dropna().unique().tolist())
+            ["Todas"] + sorted(productos_tienda["categoria"].dropna().unique().tolist())
         )
 
-        df_filtrado = productos.copy()
+        df_filtrado = productos_tienda.copy()
 
         if filtro_categoria != "Todas":
             df_filtrado = df_filtrado[df_filtrado["categoria"] == filtro_categoria]
@@ -664,17 +822,55 @@ elif menu == "📋 Inventario":
 
         producto_actualizar = st.selectbox(
             "Selecciona un producto para aumentar stock",
-            productos["codigo"] + " - " + productos["nombre"]
+            productos_tienda["codigo"] + " - " + productos_tienda["nombre"],
+            key="producto_actualizar"
         )
 
         codigo_actualizar = producto_actualizar.split(" - ")[0]
         cantidad_agregar = st.number_input("Cantidad a agregar", min_value=0, step=1)
 
         if st.button("Agregar stock"):
-            indice = productos[productos["codigo"] == codigo_actualizar].index[0]
+            condicion_producto = (
+                (productos["tienda"] == tienda_actual) &
+                (productos["codigo"] == codigo_actualizar)
+            )
+
+            indice = productos[condicion_producto].index[0]
             productos.loc[indice, "stock"] = int(productos.loc[indice, "stock"]) + int(cantidad_agregar)
+
             guardar_productos(productos)
             st.success("Stock actualizado correctamente.")
+            st.rerun()
+
+        st.markdown("### 🗑️ Eliminar producto")
+
+        producto_eliminar = st.selectbox(
+            "Selecciona un producto para eliminar",
+            productos_tienda["codigo"] + " - " + productos_tienda["nombre"],
+            key="producto_eliminar"
+        )
+
+        codigo_eliminar = producto_eliminar.split(" - ")[0]
+
+        confirmar_eliminacion = st.checkbox(
+            "Confirmo que deseo eliminar este producto del inventario"
+        )
+
+        if st.button("Eliminar producto"):
+            if confirmar_eliminacion:
+                productos = productos[
+                    ~(
+                        (productos["tienda"] == tienda_actual) &
+                        (productos["codigo"] == codigo_eliminar)
+                    )
+                ]
+
+                guardar_productos(productos)
+                st.success("Producto eliminado correctamente.")
+                st.rerun()
+            else:
+                st.warning("Debes confirmar la eliminación antes de continuar.")
+
 
 # =========================================================
 # ANÁLISIS DE VENTAS
@@ -683,14 +879,14 @@ elif menu == "📋 Inventario":
 elif menu == "📊 Análisis de ventas":
     st.markdown('<p class="titulo-principal">Análisis de ventas</p>', unsafe_allow_html=True)
     st.markdown(
-        '<p class="subtitulo">Identifica qué productos se venden más y cuáles se venden menos</p>',
+        f'<p class="subtitulo">Productos más vendidos y menos vendidos de {tienda_actual}</p>',
         unsafe_allow_html=True
     )
 
-    if ventas.empty:
-        st.warning("Todavía no existen ventas registradas.")
+    if ventas_tienda.empty:
+        st.warning("Todavía no existen ventas registradas para esta tienda.")
     else:
-        resumen = obtener_resumen_ventas(ventas)
+        resumen = obtener_resumen_ventas(ventas_tienda)
 
         st.markdown("### 🏆 Productos más vendidos")
         mas_vendidos = resumen.sort_values(by="cantidad", ascending=False).head(5)
@@ -707,6 +903,7 @@ elif menu == "📊 Análisis de ventas":
         st.dataframe(ingresos, width="stretch")
         st.bar_chart(ingresos.set_index("producto")["total"])
 
+
 # =========================================================
 # RECOMENDACIONES
 # =========================================================
@@ -714,15 +911,15 @@ elif menu == "📊 Análisis de ventas":
 elif menu == "💡 Recomendaciones":
     st.markdown('<p class="titulo-principal">Recomendaciones inteligentes</p>', unsafe_allow_html=True)
     st.markdown(
-        '<p class="subtitulo">Sugerencias de compra, reposición y ubicación estratégica de productos</p>',
+        f'<p class="subtitulo">Sugerencias de compra y ubicación para {tienda_actual}</p>',
         unsafe_allow_html=True
     )
 
-    if productos.empty:
+    if productos_tienda.empty:
         st.warning("Primero debes registrar productos.")
     else:
-        resumen = obtener_resumen_ventas(ventas)
-        productos_analisis = productos.copy()
+        resumen = obtener_resumen_ventas(ventas_tienda)
+        productos_analisis = productos_tienda.copy()
 
         if resumen.empty:
             productos_analisis["cantidad_vendida"] = 0
@@ -797,19 +994,6 @@ elif menu == "💡 Recomendaciones":
                     unsafe_allow_html=True
                 )
 
-        st.markdown("### 🧠 Interpretación general")
-
-        st.markdown(
-            """
-            <div class="card">
-            La aplicación analiza el comportamiento de cada producto según su stock actual,
-            stock mínimo y cantidad vendida. Con esta información, <strong>InventiQ</strong>
-            recomienda qué productos comprar más, cuáles comprar menos y qué artículos deben ser
-            reubicados dentro de la tienda para mejorar su visibilidad y aumentar sus ventas.
-            </div>
-            """,
-            unsafe_allow_html=True
-        )
 
 # =========================================================
 # REPORTES
@@ -818,16 +1002,16 @@ elif menu == "💡 Recomendaciones":
 elif menu == "🧾 Reportes":
     st.markdown('<p class="titulo-principal">Reportes</p>', unsafe_allow_html=True)
     st.markdown(
-        '<p class="subtitulo">Resumen general para la toma de decisiones</p>',
+        f'<p class="subtitulo">Resumen general de {tienda_actual}</p>',
         unsafe_allow_html=True
     )
 
-    if productos.empty:
+    if productos_tienda.empty:
         st.warning("No hay datos suficientes para generar reportes.")
     else:
-        total_inventario = float((productos["precio_compra"] * productos["stock"]).sum())
-        ganancia_estimada = float(((productos["precio_venta"] - productos["precio_compra"]) * productos["stock"]).sum())
-        ventas_acumuladas = float(ventas["total"].sum()) if not ventas.empty else 0
+        total_inventario = float((productos_tienda["precio_compra"] * productos_tienda["stock"]).sum())
+        ganancia_estimada = float(((productos_tienda["precio_venta"] - productos_tienda["precio_compra"]) * productos_tienda["stock"]).sum())
+        ventas_acumuladas = float(ventas_tienda["total"].sum()) if not ventas_tienda.empty else 0
 
         col1, col2, col3 = st.columns(3)
 
@@ -842,7 +1026,7 @@ elif menu == "🧾 Reportes":
 
         st.markdown("### 📦 Stock por categoría")
 
-        stock_categoria = productos.groupby("categoria", as_index=False)["stock"].sum()
+        stock_categoria = productos_tienda.groupby("categoria", as_index=False)["stock"].sum()
 
         st.dataframe(stock_categoria, width="stretch")
         st.bar_chart(stock_categoria.set_index("categoria")["stock"])
@@ -854,15 +1038,15 @@ elif menu == "🧾 Reportes":
         with col_a:
             st.download_button(
                 label="Descargar inventario en CSV",
-                data=productos.to_csv(index=False).encode("utf-8"),
-                file_name="inventario_inventiq.csv",
+                data=productos_tienda.to_csv(index=False).encode("utf-8"),
+                file_name=f"inventario_{tienda_actual}.csv",
                 mime="text/csv"
             )
 
         with col_b:
             st.download_button(
                 label="Descargar ventas en CSV",
-                data=ventas.to_csv(index=False).encode("utf-8"),
-                file_name="ventas_inventiq.csv",
+                data=ventas_tienda.to_csv(index=False).encode("utf-8"),
+                file_name=f"ventas_{tienda_actual}.csv",
                 mime="text/csv"
             )
