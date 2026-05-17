@@ -1,0 +1,2 @@
+codigo,nombre,categoria,proveedor,precio_compra,precio_venta,stock,stock_minimo,ubicacion,fecha_ingreso
+P001,Coca-Cola 500ml,Bebidas,Coca-Cola,0.35,0.5,29,10,Refrigerador Principal,2026-05-17
