@@ -374,7 +374,7 @@ if "mensaje_registro" not in st.session_state:
 
 
 # =========================================================
-# LOGIN Y REGISTRO ESTILO TARJETA
+# LOGIN Y REGISTRO CORREGIDO Y CENTRADO
 # =========================================================
 
 def pantalla_login_registro():
@@ -383,27 +383,35 @@ def pantalla_login_registro():
     st.markdown(
         """
         <style>
-        .auth-background {
-            min-height: 85vh;
-            display: flex;
-            justify-content: center;
-            align-items: center;
-            background: linear-gradient(135deg, #2dd4bf, #60a5fa, #f9a8d4);
-            border-radius: 24px;
-            padding: 40px;
+
+        header[data-testid="stHeader"] {
+            background: transparent !important;
         }
 
-        .auth-card {
-            width: 430px;
-            background: #ffffff;
-            padding: 35px;
-            border-radius: 22px;
-            box-shadow: 0 15px 40px rgba(0,0,0,0.18);
-            text-align: center;
-            border: 1px solid #e5e7eb;
+        .stApp {
+            background: linear-gradient(135deg, #2dd4bf, #60a5fa, #f9a8d4) !important;
         }
 
-        .auth-icon {
+        .block-container {
+            max-width: 520px !important;
+            padding-top: 8vh !important;
+            padding-bottom: 4vh !important;
+            background: transparent !important;
+        }
+
+        div[data-testid="stForm"] {
+            background: #ffffff !important;
+            border: 1px solid #e5e7eb !important;
+            border-radius: 24px !important;
+            padding: 34px !important;
+            box-shadow: 0 18px 45px rgba(0,0,0,0.22) !important;
+        }
+
+        div[data-testid="stForm"] * {
+            color: #111827 !important;
+        }
+
+        .login-icon {
             width: 90px;
             height: 90px;
             background: #0f3a66;
@@ -412,44 +420,64 @@ def pantalla_login_registro():
             display: flex;
             justify-content: center;
             align-items: center;
-            margin: -75px auto 20px auto;
+            margin: 0 auto -35px auto;
             font-size: 46px;
             border: 5px solid white;
-            box-shadow: 0 8px 20px rgba(0,0,0,0.18);
+            box-shadow: 0 8px 20px rgba(0,0,0,0.22);
+            position: relative;
+            z-index: 5;
         }
 
-        .auth-title {
-            font-size: 31px;
+        .login-title {
+            text-align: center;
+            font-size: 34px;
             font-weight: 800;
             color: #0f172a !important;
+            margin-top: 42px;
             margin-bottom: 4px;
         }
 
-        .auth-subtitle {
-            font-size: 14px;
-            color: #64748b !important;
-            margin-bottom: 25px;
-        }
-
-        .auth-link {
+        .login-subtitle {
             text-align: center;
             font-size: 14px;
-            color: #2563eb !important;
-            margin-top: 15px;
+            color: #64748b !important;
+            margin-bottom: 20px;
         }
 
-        div[data-testid="stForm"] {
-            border: none;
-            padding: 0px;
+        .login-link {
+            text-align: center;
+            font-size: 14px;
+            color: #0f3a66 !important;
+            font-weight: 600;
+            margin-top: 16px;
+            margin-bottom: 8px;
+        }
+
+        .stTextInput label {
+            color: #111827 !important;
+            font-weight: 600 !important;
         }
 
         .stTextInput input {
             border-radius: 10px !important;
             border: 1px solid #d1d5db !important;
             padding: 10px !important;
+            background-color: #ffffff !important;
+            color: #111827 !important;
         }
 
-        .stButton button, .stFormSubmitButton button {
+        .stFormSubmitButton button {
+            width: 100%;
+            background-color: #0f3a66 !important;
+            color: white !important;
+            border-radius: 10px !important;
+            border: none !important;
+            font-weight: 700 !important;
+            padding: 0.70rem 1rem !important;
+            margin-top: 8px;
+        }
+
+        .stButton button {
             width: 100%;
             background-color: #0f3a66 !important;
             color: white !important;
@@ -457,30 +485,30 @@ def pantalla_login_registro():
             border: none !important;
             font-weight: 700 !important;
             padding: 0.65rem 1rem !important;
-            margin-top: 8px;
         }
 
-        .stButton button:hover, .stFormSubmitButton button:hover {
+        .stButton button:hover,
+        .stFormSubmitButton button:hover {
             background-color: #09294a !important;
             color: white !important;
         }
+
+        div[data-testid="stAlert"] {
+            border-radius: 12px !important;
+        }
+
         </style>
         """,
         unsafe_allow_html=True
     )
 
-    st.markdown('<div class="auth-background">', unsafe_allow_html=True)
+    if not st.session_state.mostrar_registro:
+        st.markdown('<div class="login-icon">👤</div>', unsafe_allow_html=True)
 
-    col1, col2, col3 = st.columns([1, 1.15, 1])
-
-    with col2:
-        st.markdown('<div class="auth-card">', unsafe_allow_html=True)
-
-        if not st.session_state.mostrar_registro:
-            st.markdown('<div class="auth-icon">👤</div>', unsafe_allow_html=True)
-            st.markdown('<div class="auth-title">InventiQ</div>', unsafe_allow_html=True)
+        with st.form("form_login"):
+            st.markdown('<div class="login-title">InventiQ</div>', unsafe_allow_html=True)
             st.markdown(
-                '<div class="auth-subtitle">Inicia sesión para gestionar tu inventario</div>',
+                '<div class="login-subtitle">Inicia sesión para gestionar tu inventario</div>',
                 unsafe_allow_html=True
             )
 
@@ -488,97 +516,93 @@ def pantalla_login_registro():
                 st.success(st.session_state.mensaje_registro)
                 st.session_state.mensaje_registro = ""
 
-            with st.form("form_login"):
-                usuario_login = st.text_input("Usuario", placeholder="Ingresa tu usuario")
-                password_login = st.text_input("Contraseña", type="password", placeholder="Ingresa tu contraseña")
-                ingresar = st.form_submit_button("LOGIN")
+            usuario_login = st.text_input("Usuario", placeholder="Ingresa tu usuario")
+            password_login = st.text_input("Contraseña", type="password", placeholder="Ingresa tu contraseña")
+            ingresar = st.form_submit_button("LOGIN")
 
-            if ingresar:
-                if usuario_login.strip() == "" or password_login.strip() == "":
-                    st.warning("Ingresa usuario y contraseña.")
+        if ingresar:
+            if usuario_login.strip() == "" or password_login.strip() == "":
+                st.warning("Ingresa usuario y contraseña.")
+            else:
+                password_hash = hash_password(password_login)
+
+                usuario_encontrado = usuarios[
+                    (usuarios["usuario"] == usuario_login) &
+                    (usuarios["password_hash"] == password_hash)
+                ]
+
+                if usuario_encontrado.empty:
+                    st.error("Usuario o contraseña incorrectos.")
                 else:
-                    password_hash = hash_password(password_login)
+                    datos = usuario_encontrado.iloc[0]
 
-                    usuario_encontrado = usuarios[
-                        (usuarios["usuario"] == usuario_login) &
-                        (usuarios["password_hash"] == password_hash)
-                    ]
+                    st.session_state.logueado = True
+                    st.session_state.usuario = datos["usuario"]
+                    st.session_state.tienda = datos["tienda"]
+                    st.session_state.encargado = datos["encargado"]
 
-                    if usuario_encontrado.empty:
-                        st.error("Usuario o contraseña incorrectos.")
-                    else:
-                        datos = usuario_encontrado.iloc[0]
-
-                        st.session_state.logueado = True
-                        st.session_state.usuario = datos["usuario"]
-                        st.session_state.tienda = datos["tienda"]
-                        st.session_state.encargado = datos["encargado"]
-
-                        st.success("Inicio de sesión correcto.")
-                        st.rerun()
-
-            st.markdown(
-                '<div class="auth-link">¿No tienes cuenta?</div>',
-                unsafe_allow_html=True
-            )
-
-            if st.button("Registrarse"):
-                st.session_state.mostrar_registro = True
-                st.rerun()
-
-        else:
-            st.markdown('<div class="auth-icon">📝</div>', unsafe_allow_html=True)
-            st.markdown('<div class="auth-title">Crear cuenta</div>', unsafe_allow_html=True)
-            st.markdown(
-                '<div class="auth-subtitle">Registra tu tienda para usar InventiQ</div>',
-                unsafe_allow_html=True
-            )
-
-            with st.form("form_registro"):
-                tienda = st.text_input("Nombre de la tienda", placeholder="Ejemplo: Minimarket La Esquina")
-                encargado = st.text_input("Nombre del encargado", placeholder="Ejemplo: Juan Pérez")
-                nuevo_usuario = st.text_input("Crear usuario", placeholder="Ejemplo: tienda1")
-                nueva_password = st.text_input("Crear contraseña", type="password")
-                confirmar_password = st.text_input("Confirmar contraseña", type="password")
-                registrar = st.form_submit_button("GET STARTED")
-
-            if registrar:
-                if tienda.strip() == "" or encargado.strip() == "" or nuevo_usuario.strip() == "" or nueva_password.strip() == "":
-                    st.warning("Completa todos los campos.")
-                elif nueva_password != confirmar_password:
-                    st.error("Las contraseñas no coinciden.")
-                elif nuevo_usuario in usuarios["usuario"].astype(str).values:
-                    st.error("Ese usuario ya existe. Elige otro.")
-                else:
-                    nuevo_registro = pd.DataFrame(
-                        [{
-                            "usuario": nuevo_usuario,
-                            "password_hash": hash_password(nueva_password),
-                            "tienda": tienda,
-                            "encargado": encargado,
-                            "fecha_registro": datetime.now().strftime("%Y-%m-%d %H:%M:%S")
-                        }]
-                    )
-
-                    usuarios = pd.concat([usuarios, nuevo_registro], ignore_index=True)
-                    guardar_usuarios(usuarios)
-
-                    st.session_state.mostrar_registro = False
-                    st.session_state.mensaje_registro = "Cuenta creada correctamente. Ahora inicia sesión."
+                    st.success("Inicio de sesión correcto.")
                     st.rerun()
 
+        st.markdown(
+            '<div class="login-link">¿No tienes cuenta?</div>',
+            unsafe_allow_html=True
+        )
+
+        if st.button("Registrarse"):
+            st.session_state.mostrar_registro = True
+            st.rerun()
+
+    else:
+        st.markdown('<div class="login-icon">📝</div>', unsafe_allow_html=True)
+
+        with st.form("form_registro"):
+            st.markdown('<div class="login-title">Crear cuenta</div>', unsafe_allow_html=True)
             st.markdown(
-                '<div class="auth-link">¿Ya tienes cuenta?</div>',
+                '<div class="login-subtitle">Registra tu tienda para usar InventiQ</div>',
                 unsafe_allow_html=True
             )
 
-            if st.button("Volver al login"):
+            tienda = st.text_input("Nombre de la tienda", placeholder="Ejemplo: Minimarket La Esquina")
+            encargado = st.text_input("Nombre del encargado", placeholder="Ejemplo: Juan Pérez")
+            nuevo_usuario = st.text_input("Crear usuario", placeholder="Ejemplo: tienda1")
+            nueva_password = st.text_input("Crear contraseña", type="password")
+            confirmar_password = st.text_input("Confirmar contraseña", type="password")
+            registrar = st.form_submit_button("GET STARTED")
+
+        if registrar:
+            if tienda.strip() == "" or encargado.strip() == "" or nuevo_usuario.strip() == "" or nueva_password.strip() == "":
+                st.warning("Completa todos los campos.")
+            elif nueva_password != confirmar_password:
+                st.error("Las contraseñas no coinciden.")
+            elif nuevo_usuario in usuarios["usuario"].astype(str).values:
+                st.error("Ese usuario ya existe. Elige otro.")
+            else:
+                nuevo_registro = pd.DataFrame(
+                    [{
+                        "usuario": nuevo_usuario,
+                        "password_hash": hash_password(nueva_password),
+                        "tienda": tienda,
+                        "encargado": encargado,
+                        "fecha_registro": datetime.now().strftime("%Y-%m-%d %H:%M:%S")
+                    }]
+                )
+
+                usuarios = pd.concat([usuarios, nuevo_registro], ignore_index=True)
+                guardar_usuarios(usuarios)
+
                 st.session_state.mostrar_registro = False
+                st.session_state.mensaje_registro = "Cuenta creada correctamente. Ahora inicia sesión."
                 st.rerun()
 
-        st.markdown('</div>', unsafe_allow_html=True)
+        st.markdown(
+            '<div class="login-link">¿Ya tienes cuenta?</div>',
+            unsafe_allow_html=True
+        )
 
-    st.markdown('</div>', unsafe_allow_html=True)
+        if st.button("Volver al login"):
+            st.session_state.mostrar_registro = False
+            st.rerun()
 
 
 if not st.session_state.logueado:
