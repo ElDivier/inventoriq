@@ -568,7 +568,7 @@ def pantalla_login_registro():
             nuevo_usuario = st.text_input("Crear usuario", placeholder="Ejemplo: tienda1")
             nueva_password = st.text_input("Crear contraseña", type="password")
             confirmar_password = st.text_input("Confirmar contraseña", type="password")
-            registrar = st.form_submit_button("GET STARTED")
+            registrar = st.form_submit_button("LISTO")
 
         if registrar:
             if tienda.strip() == "" or encargado.strip() == "" or nuevo_usuario.strip() == "" or nueva_password.strip() == "":
