@@ -479,7 +479,7 @@ def pantalla_login_registro():
 
         .stButton button {
             width: 100%;
-            background-color: #0f3a66 !important;
+            background-color: #3b82f6 !important;
             color: white !important;
             border-radius: 10px !important;
             border: none !important;
@@ -489,7 +489,7 @@ def pantalla_login_registro():
 
         .stButton button:hover,
         .stFormSubmitButton button:hover {
-            background-color: #1d4ed8 !important;
+            background-color: #2563eb !important;
             color: white !important;
         }
 
